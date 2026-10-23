@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - TrustVault{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#1e3f2b]">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <span>Security &amp; Vault Dashboard</span>
+        <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 text-[#00ff88] border border-[#1e3f2b] font-mono">
+          Admin Level
+        </span>
+      </h1>
+      <p class="text-xs text-slate-400 mt-1">Real-time system telemetry, access metrics, and tamper-evident audit status.</p>
+    </div>
+
+    <!-- Integrity Status Badge -->
+    <div>
+      {% if integrity.is_valid %}
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/80 border border-[#00ff88]/40 text-[#00ff88] text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse"></span>
+        <span>Audit Hash Chain Verified (0 Tamper Breaches)</span>
+      </div>
+      {% else %}
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+        <span>Chain Alert: Tampering Detected!</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Metric KPI Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    
+    <div class="bg-[#0f2518] border border-[#1e3f2b] rounded-xl p-5">
+      <div class="text-slate-400 text-xs uppercase font-medium tracking-wider">Total Documents</div>
+      <div class="text-2xl font-black text-white mt-2">{{ total_documents }}</div>
+      <div class="text-[11px] text-[#00ff88] mt-1 font-mono">Encrypted at rest</div>
+    </div>
+
+    <div class="bg-[#0f2518] border border-[#1e3f2b] rounded-xl p-5">
+      <div class="text-slate-400 text-xs uppercase font-medium tracking-wider">Active Identities</div>
+      <div class="text-2xl font-black text-white mt-2">{{ total_users }}</div>
+      <div class="text-[11px] text-slate-400 mt-1">Supabase Auth</div>
+    </div>
+
+    <div class="bg-[#0f2518] border border-[#1e3f2b] rounded-xl p-5">
+      <div class="text-slate-400 text-xs uppercase font-medium tracking-wider">Audit Chain Blocks</div>
+      <div class="text-2xl font-black text-[#00ff88] mt-2 font-mono">{{ integrity.count }}</div>
+      <div class="text-[11px] text-slate-400 mt-1">SHA-256 Chained</div>
+    </div>
+
+    <div class="bg-[#0f2518] border border-[#1e3f2b] rounded-xl p-5">
+      <div class="text-slate-400 text-xs uppercase font-medium tracking-wider">Security Policy</div>
+      <div class="text-2xl font-black text-white mt-2">Zero-Trust</div>
+      <div class="text-[11px] text-[#00ff88] mt-1">Strict RBAC + RLS</div>
+    </div>
+
+  </div>
+
+  <!-- Recent Audit Events in Dashboard -->
+  <div class="bg-[#0f2518] border border-[#1e3f2b] rounded-2xl p-6 shadow-xl space-y-4">
+    <div class="flex items-center justify-between border-b border-[#1e3f2b] pb-3">
+      <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+        <svg class="w-4 h-4 text-[#00ff88]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        Recent Tamper-Evident Audit Transactions
+      </h2>
+      <a href="/activity-logs" class="text-xs text-[#00ff88] font-semibold hover:underline">
+        View Full Chain &rarr;
+      </a>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead>
+          <tr class="text-slate-400 uppercase tracking-wider border-b border-[#1e3f2b] text-[10px]">
+            <th class="py-2.5 px-3">Seq #</th>
+            <th class="py-2.5 px-3">Actor</th>
+            <th class="py-2.5 px-3">Action</th>
+            <th class="py-2.5 px-3">Status</th>
+            <th class="py-2.5 px-3">Current Hash Digest</th>
+            <th class="py-2.5 px-3">Timestamp</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#1e3f2b] text-slate-300">
+          {% for log in recent_logs %}
+          <tr class="hover:bg-[#122e1e] transition-colors">
+            <td class="py-2.5 px-3 font-mono text-[#00ff88]">#{{ log.sequence_number }}</td>
+            <td class="py-2.5 px-3 font-medium text-white">{{ log.actor_email }}</td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded text-[10px] bg-[#0a1c12] border border-[#1e3f2b] font-mono">
+                {{ log.action }}
+              </span>
+            </td>
+            <td class="py-2.5 px-3">
+              {% if log.status == 'success' %}
+              <span class="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Success
+              </span>
+              {% else %}
+              <span class="text-rose-400 text-[11px] font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Denied / Blocked
+              </span>
+              {% endif %}
+            </td>
+            <td class="py-2.5 px-3 font-mono text-[10px] text-slate-400">
+              <span title="{{ log.record_hash }}">{{ log.record_hash[:12] }}...{{ log.record_hash[-6:] }}</span>
+            </td>
+            <td class="py-2.5 px-3 text-slate-400 text-[11px]">
+              {{ log.timestamp[:19] if log.timestamp else '' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

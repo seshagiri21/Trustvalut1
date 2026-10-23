@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Search Documents - TrustVault{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-white">Search Documents</h1>
+    <p class="text-xs text-slate-400 mt-1">Query documents across your authorized vault access by category, date, and owner.</p>
+  </div>
+
+  <!-- Search Filter Form as specified -->
+  <div class="bg-[#0f2518] border border-[#1e3f2b] rounded-2xl p-6 shadow-xl">
+    <form method="GET" action="/search" class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Title / Filename -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Title / Filename</label>
+          <input type="text" name="title" value="{{ filters.title }}" placeholder="e.g. Q3 Financials"
+            class="w-full px-3 py-2.5 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white placeholder-slate-500 focus:outline-none focus:border-[#00ff88] text-xs transition" />
+        </div>
+
+        <!-- Category Dropdown -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Category</label>
+          <select name="category"
+            class="w-full px-3 py-2.5 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white focus:outline-none focus:border-[#00ff88] text-xs transition">
+            <option value="">All Categories</option>
+            <option value="Finance" {% if filters.category == 'Finance' %}selected{% endif %}>Finance</option>
+            <option value="HR" {% if filters.category == 'HR' %}selected{% endif %}>HR</option>
+            <option value="Legal" {% if filters.category == 'Legal' %}selected{% endif %}>Legal</option>
+            <option value="IT" {% if filters.category == 'IT' %}selected{% endif %}>IT</option>
+            <option value="Education" {% if filters.category == 'Education' %}selected{% endif %}>Education</option>
+            <option value="Personal" {% if filters.category == 'Personal' %}selected{% endif %}>Personal</option>
+          </select>
+        </div>
+
+        <!-- Owner Username -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Owner Username</label>
+          <input type="text" name="owner" value="{{ filters.owner }}" placeholder="e.g. john_doe"
+            class="w-full px-3 py-2.5 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white placeholder-slate-500 focus:outline-none focus:border-[#00ff88] text-xs transition" />
+        </div>
+
+        <!-- Date Picker -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Date Uploaded</label>
+          <input type="date" name="date" value="{{ filters.date }}"
+            class="w-full px-3 py-2.5 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white focus:outline-none focus:border-[#00ff88] text-xs transition" />
+        </div>
+
+      </div>
+
+      <!-- Action Buttons: Search Documents & Reset Filters -->
+      <div class="flex items-center gap-3 pt-2">
+        <button type="submit"
+          class="px-5 py-2.5 rounded-lg bg-[#00ff88] hover:bg-[#00cc6a] text-black font-bold text-xs tracking-wide transition shadow-lg shadow-[#00ff88]/20 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          Search Documents
+        </button>
+
+        <a href="/search"
+          class="px-4 py-2.5 rounded-lg bg-[#0a1c12] hover:bg-[#153421] border border-[#1e3f2b] text-slate-300 font-medium text-xs transition">
+          Reset Filters
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Results Section -->
+  {% if has_searched %}
+  <div class="space-y-4">
+    <h2 class="text-sm font-bold text-white uppercase tracking-wider">
+      Found {{ results|length }} Result{% if results|length != 1 %}s{% endif %}
+    </h2>
+
+    {% if results %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for doc in results %}
+      <div class="p-4 rounded-xl bg-[#0f2518] border border-[#1e3f2b] hover:border-[#00ff88]/40 transition space-y-3">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-[#00ff88] border border-[#1e3f2b] font-medium">
+              {{ doc.category }}
+            </span>
+            <h3 class="text-sm font-bold text-white mt-1">{{ doc.title }}</h3>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">{{ (doc.file_size_bytes / 1024)|round(1) }} KB</span>
+        </div>
+        <p class="text-xs text-slate-400 line-clamp-2">{{ doc.description or 'No description provided.' }}</p>
+        <div class="flex items-center justify-between pt-2 border-t border-[#1e3f2b] text-xs">
+          <span class="text-slate-400 text-[11px]">Owner: <span class="text-slate-200">{{ doc.owner_id[:8] }}...</span></span>
+          <button onclick="downloadDocument('{{ doc.id }}')" class="text-[#00ff88] hover:underline font-semibold flex items-center gap-1">
+            Download Signed URL &rarr;
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-10 bg-[#0f2518] border border-[#1e3f2b] rounded-xl text-slate-400 text-xs">
+      No documents matched your search criteria.
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+async function downloadDocument(docId) {
+  try {
+    const res = await fetch(`/api/documents/${docId}/signed-url`);
+    const data = await res.json();
+    if (res.ok && data.signed_url) {
+      window.open(data.signed_url, '_blank');
+    } else {
+      alert(data.detail || 'Access denied.');
+    }
+  } catch (err) {
+    alert('Failed to obtain download URL.');
+  }
+}
+</script>
+{% endblock %}

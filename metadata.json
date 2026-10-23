@@ -1,0 +1,6 @@
+{
+  "name": "TrustVault - Secure Document Sharing Platform",
+  "description": "Enterprise-grade document sharing platform with granular RBAC, private storage, and tamper-evident cryptographic audit trail.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

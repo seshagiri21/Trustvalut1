@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Document - TrustVault{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-white">Upload Document</h1>
+    <p class="text-xs text-slate-400 mt-1">Upload private documents directly into AES-256 encrypted storage buckets.</p>
+  </div>
+
+  <!-- Security Notice Warning Box as explicitly required -->
+  <div class="p-4 rounded-xl bg-[#0f2518] border border-amber-500/40 bg-gradient-to-r from-[#0f2518] to-amber-950/20 text-amber-200 text-xs flex gap-3 shadow-lg">
+    <div class="w-6 h-6 rounded-md bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 text-amber-400 mt-0.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+    </div>
+    <div class="space-y-1">
+      <h4 class="font-bold text-amber-300 uppercase tracking-wider text-[11px]">Security Notice &amp; Audit Disclosure</h4>
+      <p class="text-slate-300 leading-relaxed text-[11px]">
+        All uploaded files are subjected to strict MIME validation and maximum 10MB size limits. Upon upload, a SHA-256 cryptographic digest is computed, and an append-only event is committed into the tamper-evident PostgreSQL audit hash chain. Unauthorized downloads or privilege escalation attempts are blocked and logged.
+      </p>
+    </div>
+  </div>
+
+  <!-- Upload Form -->
+  <div class="bg-[#0f2518] border border-[#1e3f2b] rounded-2xl p-6 sm:p-8 shadow-2xl">
+    <form id="uploadForm" onsubmit="handleUpload(event)" class="space-y-5">
+      
+      <!-- Title -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          Document Title <span class="text-[#00ff88]">*</span>
+        </label>
+        <input type="text" id="title" required placeholder="e.g. 2026 Board Resolution Draft"
+          class="w-full px-4 py-3 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white placeholder-slate-500 focus:outline-none focus:border-[#00ff88] text-xs transition" />
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Description</label>
+        <textarea id="description" rows="3" placeholder="Brief summary of document content, confidentiality level, and stakeholders..."
+          class="w-full px-4 py-3 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white placeholder-slate-500 focus:outline-none focus:border-[#00ff88] text-xs transition"></textarea>
+      </div>
+
+      <!-- Category Dropdown -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          Category <span class="text-[#00ff88]">*</span>
+        </label>
+        <select id="category" required
+          class="w-full px-4 py-3 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white focus:outline-none focus:border-[#00ff88] text-xs transition">
+          <option value="">Select a category</option>
+          <option value="Finance">Finance</option>
+          <option value="HR">HR</option>
+          <option value="Legal">Legal</option>
+          <option value="IT">IT</option>
+          <option value="Education">Education</option>
+          <option value="Personal">Personal</option>
+        </select>
+      </div>
+
+      <!-- File Input -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          Document File <span class="text-[#00ff88]">*</span>
+        </label>
+        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-[#1e3f2b] border-dashed rounded-xl hover:border-[#00ff88]/50 transition bg-[#0a1c12]">
+          <div class="space-y-2 text-center">
+            <svg class="mx-auto h-10 w-10 text-emerald-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <div class="flex text-xs text-slate-300 justify-center">
+              <label for="fileInput" class="relative cursor-pointer rounded-md font-semibold text-[#00ff88] hover:underline focus-within:outline-none">
+                <span>Select a file from device</span>
+                <input id="fileInput" name="file" type="file" required class="sr-only" onchange="previewFile(this)"
+                  accept=".pdf,.txt,.docx,.xlsx,.csv,.png,.jpg,.jpeg" />
+              </label>
+            </div>
+            <p class="text-[10px] text-slate-400 font-mono">PDF, TXT, DOCX, XLSX, CSV, PNG, JPG (Max 10 MB)</p>
+            <p id="fileNamePreview" class="text-xs text-emerald-300 font-semibold hidden"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="pt-4">
+        <button type="submit" id="submitBtn"
+          class="w-full py-3.5 px-6 rounded-lg bg-[#00ff88] hover:bg-[#00cc6a] text-black font-bold text-sm tracking-wide transition shadow-lg shadow-[#00ff88]/20 flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <span>Upload Securely</span>
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+
+<script>
+function previewFile(input) {
+  const preview = document.getElementById('fileNamePreview');
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Selected file exceeds maximum allowed size (10 MB).');
+      input.value = '';
+      preview.classList.add('hidden');
+      return;
+    }
+    preview.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    preview.classList.remove('hidden');
+  }
+}
+
+async function handleUpload(e) {
+  e.preventDefault();
+  const title = document.getElementById('title').value;
+  const description = document.getElementById('description').value;
+  const category = document.getElementById('category').value;
+  const fileInput = document.getElementById('fileInput');
+
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('Please select a file.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('description', description);
+  formData.append('category', category);
+  formData.append('file', fileInput.files[0]);
+
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = 'Encrypting & Uploading to Vault...';
+
+  try {
+    const res = await fetch('/api/documents/upload', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Document securely uploaded and hashed into audit chain!');
+      window.location.href = '/documents';
+    } else {
+      alert(data.detail || 'Upload failed.');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Upload Securely';
+    }
+  } catch (err) {
+    alert('Network error communicating with storage API.');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = 'Upload Securely';
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#05140b] text-gray-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}TrustVault - Tamper-Evident Document Sharing{% endblock %}</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            vault: {
+              bg: '#05140b',
+              card: '#0f2518',
+              border: '#1e3f2b',
+              accent: '#00ff88',
+              accentDark: '#00cc6a',
+              glow: 'rgba(0, 255, 136, 0.15)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Neon glow effect */
+    .glow-neon {
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.25);
+    }
+    .border-glow:focus-within {
+      border-color: #00ff88;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+  </style>
+</head>
+<body class="h-full bg-[#05140b] text-slate-100 font-sans antialiased flex flex-col md:flex-row overflow-hidden" x-data="{ mobileMenuOpen: false, userMenuOpen: false }">
+
+  {% if user %}
+  <!-- Sidebar for Authenticated Users -->
+  <aside class="w-64 bg-[#0a1c12] border-r border-[#1e3f2b] flex flex-col justify-between hidden md:flex h-full select-none">
+    <div>
+      <!-- Brand Logo -->
+      <div class="h-16 flex items-center px-6 border-b border-[#1e3f2b] gap-3">
+        <div class="w-9 h-9 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/30 flex items-center justify-center text-[#00ff88]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <div>
+          <span class="text-lg font-bold tracking-wide text-white">Trust<span class="text-[#00ff88]">Vault</span></span>
+          <span class="block text-[10px] text-emerald-400 font-mono tracking-widest uppercase">Verified Vault</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-4 space-y-1 text-sm font-medium">
+        {% if user.role == 'admin' %}
+        <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#0f2518] border border-transparent hover:border-[#1e3f2b] transition">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          Dashboard
+          <span class="ml-auto text-[10px] bg-emerald-950 text-[#00ff88] border border-[#1e3f2b] px-1.5 py-0.5 rounded uppercase font-semibold">Admin</span>
+        </a>
+        {% endif %}
+
+        <a href="/documents" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#0f2518] border border-transparent hover:border-[#1e3f2b] transition">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          My Documents
+        </a>
+
+        <a href="/search" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#0f2518] border border-transparent hover:border-[#1e3f2b] transition">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          Search Documents
+        </a>
+
+        <a href="/categories" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#0f2518] border border-transparent hover:border-[#1e3f2b] transition">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+          Categories
+        </a>
+
+        {% if user.role in ['owner', 'admin'] %}
+        <a href="/upload" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#0f2518] border border-transparent hover:border-[#1e3f2b] transition">
+          <svg class="w-5 h-5 text-[#00ff88]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Upload Document
+        </a>
+        {% endif %}
+
+        {% if user.role == 'admin' %}
+        <a href="/activity-logs" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#0f2518] border border-transparent hover:border-[#1e3f2b] transition">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          Activity Logs
+          <span class="ml-auto text-[10px] bg-emerald-950 text-[#00ff88] border border-[#1e3f2b] px-1.5 py-0.5 rounded uppercase font-semibold">Admin</span>
+        </a>
+        {% endif %}
+      </nav>
+    </div>
+
+    <!-- Vault Protected Status Card at the bottom -->
+    <div class="p-4 m-3 rounded-xl bg-[#0f2518] border border-[#1e3f2b] relative overflow-hidden">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ff88] opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00ff88]"></span>
+        </span>
+        <span class="text-xs font-semibold text-[#00ff88] uppercase tracking-wider">Vault Protected</span>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed mb-2">
+        AES-256 Storage with SHA-256 Hash Chain verification active.
+      </p>
+      <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-[#1e3f2b]">
+        <span>Defense-in-depth</span>
+        <span class="text-[#00ff88] font-mono">ENFORCED</span>
+      </div>
+    </div>
+  </aside>
+  {% endif %}
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col h-full overflow-hidden">
+    
+    {% if user %}
+    <!-- Top Bar -->
+    <header class="h-16 bg-[#0a1c12] border-b border-[#1e3f2b] flex items-center justify-between px-6 select-none shrink-0">
+      <div class="flex items-center gap-3">
+        <!-- Mobile menu toggle -->
+        <button class="md:hidden text-slate-400 hover:text-white" @click="mobileMenuOpen = !mobileMenuOpen">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-950/80 border border-[#00ff88]/30 text-[#00ff88] font-medium flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#00ff88]"></span>
+          Secure Session
+        </span>
+        <span class="text-xs px-2.5 py-0.5 rounded bg-[#0f2518] text-slate-300 border border-[#1e3f2b] font-mono uppercase">
+          Role: {{ user.role }}
+        </span>
+      </div>
+
+      <!-- User Avatar and Profile Dropdown -->
+      <div class="relative" x-data="{ open: false }">
+        <button @click="open = !open" class="flex items-center gap-3 text-left focus:outline-none">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 to-[#00ff88] p-[1.5px]">
+            <div class="w-full h-full bg-[#0a1c12] rounded-full flex items-center justify-center text-xs font-bold text-[#00ff88]">
+              {{ user.username[0]|upper if user.username else 'U' }}
+            </div>
+          </div>
+          <div class="hidden sm:block">
+            <span class="block text-xs font-semibold text-white">{{ user.username }}</span>
+            <span class="block text-[10px] text-slate-400">{{ user.email }}</span>
+          </div>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-48 bg-[#0f2518] border border-[#1e3f2b] rounded-lg shadow-xl py-1 z-50">
+          <div class="px-4 py-2 border-b border-[#1e3f2b] text-xs">
+            <p class="text-slate-400">Signed in as</p>
+            <p class="font-bold text-white truncate">{{ user.email }}</p>
+          </div>
+          <a href="/documents" class="block px-4 py-2 text-xs text-slate-300 hover:bg-[#1a3824] hover:text-[#00ff88]">My Profile</a>
+          <a href="/login" class="block px-4 py-2 text-xs text-rose-400 hover:bg-[#1a3824]">Sign Out</a>
+        </div>
+      </div>
+    </header>
+    {% endif %}
+
+    <!-- Page Body -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#05140b]">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+</body>
+</html>
