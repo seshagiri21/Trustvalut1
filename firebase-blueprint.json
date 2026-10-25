@@ -1,0 +1,161 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access control level",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user ID matching authentication identity"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified email address"
+        },
+        "username": {
+          "type": "string",
+          "description": "User display name",
+          "maxLength": 64
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "owner", "viewer"],
+          "description": "Role in vault RBAC system"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp ISO"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp ISO"
+        }
+      },
+      "required": ["id", "email", "username", "role", "createdAt"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "Metadata for secured vault document with zero-trust permissions",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document unique UUID identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Document title",
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "description": "Document description summary",
+          "maxLength": 512
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Finance", "HR", "Legal", "IT", "Education", "Personal"],
+          "description": "Security classification category"
+        },
+        "filePath": {
+          "type": "string",
+          "description": "Relative storage path"
+        },
+        "fileSize": {
+          "type": "number",
+          "description": "File size in bytes"
+        },
+        "mimeType": {
+          "type": "string",
+          "description": "File MIME content type"
+        },
+        "fileSha256": {
+          "type": "string",
+          "description": "SHA-256 cryptographic digest of document content"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of document owner"
+        },
+        "ownerEmail": {
+          "type": "string",
+          "description": "Email of document owner"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp ISO"
+        }
+      },
+      "required": ["id", "title", "category", "filePath", "ownerId", "ownerEmail", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable chained cryptographic audit log block",
+      "type": "object",
+      "properties": {
+        "sequenceNumber": {
+          "type": "number",
+          "description": "Sequential block number in the blockchain"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of event occurrence"
+        },
+        "actorId": {
+          "type": "string",
+          "description": "User ID of actor who triggered event"
+        },
+        "actorEmail": {
+          "type": "string",
+          "description": "Email address of actor"
+        },
+        "action": {
+          "type": "string",
+          "description": "Security action type"
+        },
+        "resourceType": {
+          "type": "string",
+          "description": "Target resource type"
+        },
+        "resourceId": {
+          "type": "string",
+          "description": "Target resource identifier"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["success", "denied"],
+          "description": "Operation status outcome"
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "Client IP address"
+        },
+        "previousHash": {
+          "type": "string",
+          "description": "SHA-256 hash of preceding block"
+        },
+        "recordHash": {
+          "type": "string",
+          "description": "SHA-256 hash digest of this log entry"
+        }
+      },
+      "required": ["sequenceNumber", "timestamp", "actorId", "actorEmail", "action", "resourceType", "resourceId", "status", "previousHash", "recordHash"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and RBAC role assignment"
+    },
+    "/documents/{documentId}": {
+      "schema": "Document",
+      "description": "Vault documents with access permissions"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable tamper-evident cryptographic audit logs"
+    }
+  }
+}

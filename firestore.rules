@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'seshagirib6@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Test connection doc used on boot validation
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                    isValidId(userId) &&
+                    incoming().id == userId &&
+                    incoming().email is string &&
+                    incoming().username is string &&
+                    incoming().username.size() <= 64 &&
+                    incoming().role in ['admin', 'owner', 'viewer'];
+      allow update: if isSignedIn() &&
+                    isValidId(userId) &&
+                    (request.auth.uid == userId || isAdmin()) &&
+                    incoming().id == existing().id &&
+                    incoming().role in ['admin', 'owner', 'viewer'];
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Documents Collection
+    match /documents/{documentId} {
+      allow get: if isSignedIn() && isValidId(documentId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                    isValidId(documentId) &&
+                    incoming().id == documentId &&
+                    incoming().ownerId == request.auth.uid &&
+                    incoming().title is string &&
+                    incoming().title.size() <= 128 &&
+                    incoming().category in ['Finance', 'HR', 'Legal', 'IT', 'Education', 'Personal'];
+      allow update: if isSignedIn() &&
+                    isValidId(documentId) &&
+                    (existing().ownerId == request.auth.uid || isAdmin()) &&
+                    incoming().id == existing().id &&
+                    incoming().ownerId == existing().ownerId;
+      allow delete: if isSignedIn() &&
+                    isValidId(documentId) &&
+                    (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    // Audit Logs Collection (Immutable append-only chain)
+    match /audit_logs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                    isValidId(logId) &&
+                    incoming().sequenceNumber is number &&
+                    incoming().actorId is string &&
+                    incoming().actorEmail is string &&
+                    incoming().action is string &&
+                    incoming().status in ['success', 'denied'] &&
+                    incoming().previousHash is string &&
+                    incoming().recordHash is string;
+      // Strictly prevent tampering or deletion of immutable audit log records
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

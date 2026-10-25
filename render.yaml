@@ -1,0 +1,46 @@
+# Render Deployment Blueprint for TrustVault
+# See https://render.com/docs/blueprint-spec for syntax details
+services:
+  # ============================================================================
+  # 1. FRONTEND: React Single Page Application (Render Static Site)
+  # Free tier: Unlimited, zero downtime, global CDN
+  # ============================================================================
+  - type: web
+    name: trustvault-frontend
+    env: static
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_SUPABASE_URL
+        value: https://nwftejamrrdhdygddwtr.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: sb_publishable_HTlHZseldHbTSuecTXn7rg_4-b8oH8j
+
+  # ============================================================================
+  # 2. BACKEND: Python FastAPI Web Service (Render Free Web Service)
+  # Free tier: 750 free hours/month
+  # ============================================================================
+  - type: web
+    name: trustvault-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: SUPABASE_URL
+        value: https://nwftejamrrdhdygddwtr.supabase.co
+      - key: SUPABASE_KEY
+        value: sb_publishable_HTlHZseldHbTSuecTXn7rg_4-b8oH8j
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: ENVIRONMENT
+        value: production
