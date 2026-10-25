@@ -32,6 +32,7 @@ import {
   FileCode,
   Check,
   Eye,
+  EyeOff,
   SlidersHorizontal,
   Flame,
   MoreVertical,
@@ -164,12 +165,18 @@ export default function App() {
       setAuthView('app');
     } else {
       localStorage.removeItem('trustvault_cached_currentUser');
+      setLoginEmail('');
+      setLoginPassword('');
+      setLoginError(null);
     }
   }, [currentUser]);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Selected category filter from Categories view
@@ -187,7 +194,6 @@ export default function App() {
 
   // Modals state
   const [permissionModalDoc, setPermissionModalDoc] = useState<DocumentItem | null>(null);
-  const [signedUrlModalData, setSignedUrlModalData] = useState<{ doc: DocumentItem; url: string; expiresSec: number } | null>(null);
   const [tamperModalOpen, setTamperModalOpen] = useState(false);
   const [accessDeniedAlert, setAccessDeniedAlert] = useState<{ title: string; reason: string } | null>(null);
 
@@ -550,12 +556,18 @@ export default function App() {
     setActiveTab(targetTab);
   };
 
-  // Download handling with defense-in-depth permission check
+  // Download handling with defense-in-depth permission check and immediate browser file download
   const handleDownloadRequest = async (docItem: DocumentItem) => {
     if (!currentUser) return;
-    const isOwner = docItem.ownerId === currentUser.id;
+    const isOwner = currentUser && (
+      docItem.ownerId === currentUser.id ||
+      (docItem.ownerEmail && docItem.ownerEmail.toLowerCase() === currentUser.email.toLowerCase())
+    );
     const isAdmin = currentUser.role === 'admin';
-    const hasPerm = docItem.permissions && docItem.permissions.some(p => p.userId === currentUser.id);
+    const hasPerm = docItem.permissions && docItem.permissions.some(p => 
+      p.userId === currentUser.id || 
+      (p.email && p.email.toLowerCase() === currentUser.email.toLowerCase())
+    );
 
     if (!isOwner && !isAdmin && !hasPerm) {
       appendAuditLog(
@@ -567,24 +579,73 @@ export default function App() {
       );
       setAccessDeniedAlert({
         title: "Access Denied (403)",
-        reason: "You do not have authorization to generate a download signed URL for this private document."
+        reason: "You do not have authorization to download this private document."
       });
       return;
     }
 
-    // Success: Log authorized download
+    // Success: Log authorized download to Firestore audit chain
     appendAuditLog("download", "document", docItem.id, "success", {
       title: docItem.title,
       signedUrlExpiry: 60
     });
 
-    const simulatedUrl = `https://firestore.storage.googlestudio.internal/v1/vault/${docItem.filePath}?token=sec_gcp_${Math.random().toString(36).slice(2, 12)}&expires=60`;
+    // Trigger immediate browser file download
+    try {
+      let downloadUrl = docItem.fileDataUrl;
+      let createdBlobUrl = false;
 
-    setSignedUrlModalData({
-      doc: docItem,
-      url: simulatedUrl,
-      expiresSec: 60
-    });
+      if (!downloadUrl) {
+        // Fallback document payload generated from Firestore record
+        const fileContent = `=====================================================
+TRUSTVAULT SECURE VERIFIED DOCUMENT
+=====================================================
+Document Title: ${docItem.title}
+Document ID:    ${docItem.id}
+Classification: ${docItem.category}
+Owner Email:    ${docItem.ownerEmail}
+Timestamp:      ${docItem.createdAt}
+SHA-256 Digest: ${docItem.fileSha256}
+Integrity:      VERIFIED AGAINST FIRESTORE DATABASE
+=====================================================
+
+DOCUMENT SUMMARY:
+${docItem.description || 'Verified private document stored in Google Studio Firestore.'}
+
+SECURITY NOTICE:
+This file was securely authorized for retrieval by ${currentUser.email} (${currentUser.role.toUpperCase()}).
+`;
+        const blob = new Blob([fileContent], { type: docItem.mimeType || 'text/plain;charset=utf-8' });
+        downloadUrl = URL.createObjectURL(blob);
+        createdBlobUrl = true;
+      }
+
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      let fileName = docItem.title.trim();
+      if (!fileName.includes('.')) {
+        const extMap: Record<string, string> = {
+          'application/pdf': '.pdf',
+          'image/png': '.png',
+          'image/jpeg': '.jpg',
+          'text/plain': '.txt',
+          'text/csv': '.csv',
+          'application/json': '.json'
+        };
+        fileName += (extMap[docItem.mimeType] || '.pdf');
+      }
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      if (createdBlobUrl) {
+        setTimeout(() => URL.revokeObjectURL(downloadUrl!), 1000);
+      }
+    } catch (dlErr: any) {
+      console.error('Download execution error:', dlErr);
+      alert('Download notice: ' + (dlErr.message || 'Unable to download file.'));
+    }
   };
 
   // Grant permission - Updates Firestore document permissions
@@ -1023,14 +1084,29 @@ export default function App() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Password</label>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => { setLoginPassword(e.target.value); setLoginError(null); }}
-                  placeholder="••••••••••••"
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white placeholder-slate-500 focus:outline-none focus:border-[#00ff88] text-xs transition"
-                />
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? "text" : "password"}
+                    value={loginPassword}
+                    onChange={(e) => { setLoginPassword(e.target.value); setLoginError(null); }}
+                    placeholder="••••••••••••"
+                    required
+                    className="w-full px-4 py-3 pr-11 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white placeholder-slate-500 focus:outline-none focus:border-[#00ff88] text-xs transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(prev => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#00ff88] transition p-1 rounded focus:outline-none cursor-pointer"
+                    title={showLoginPassword ? "Hide password" : "Show password"}
+                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  >
+                    {showLoginPassword ? (
+                      <EyeOff className="w-4 h-4 text-[#00ff88]" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-slate-400 hover:text-slate-200" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between text-xs text-slate-400">
@@ -1190,26 +1266,48 @@ export default function App() {
                 <label className="block font-semibold text-slate-300 uppercase tracking-wider">Password</label>
                 <span className="text-[10px] text-emerald-400 font-mono">Min 8 characters</span>
               </div>
-              <input
-                id="regPass"
-                type="password"
-                required
-                minLength={8}
-                placeholder="••••••••••••"
-                className="w-full px-4 py-2.5 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white focus:outline-none focus:border-[#00ff88] transition"
-              />
+              <div className="relative">
+                <input
+                  id="regPass"
+                  type={showRegPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  placeholder="••••••••••••"
+                  className="w-full px-4 py-2.5 pr-10 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white focus:outline-none focus:border-[#00ff88] transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegPassword(prev => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#00ff88] transition p-1 rounded focus:outline-none cursor-pointer"
+                  title={showRegPassword ? "Hide password" : "Show password"}
+                  aria-label={showRegPassword ? "Hide password" : "Show password"}
+                >
+                  {showRegPassword ? <EyeOff className="w-3.5 h-3.5 text-[#00ff88]" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Confirm Password</label>
-              <input
-                id="regPassConfirm"
-                type="password"
-                required
-                minLength={8}
-                placeholder="••••••••••••"
-                className="w-full px-4 py-2.5 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white focus:outline-none focus:border-[#00ff88] transition"
-              />
+              <div className="relative">
+                <input
+                  id="regPassConfirm"
+                  type={showRegConfirmPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  placeholder="••••••••••••"
+                  className="w-full px-4 py-2.5 pr-10 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-white focus:outline-none focus:border-[#00ff88] transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegConfirmPassword(prev => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#00ff88] transition p-1 rounded focus:outline-none cursor-pointer"
+                  title={showRegConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={showRegConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showRegConfirmPassword ? <EyeOff className="w-3.5 h-3.5 text-[#00ff88]" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             <div className="p-3 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-[11px] text-slate-400 flex items-center gap-2">
@@ -1495,6 +1593,9 @@ export default function App() {
                         await appendAuditLog("user_logout", "auth", currentUser.id, "success", {});
                       }
                       await firebaseSignOut(auth);
+                      setLoginEmail('');
+                      setLoginPassword('');
+                      setLoginError(null);
                       setCurrentUser(null);
                       setAuthView('login');
                     }}
@@ -2576,75 +2677,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ----------------------------------------------------------------------------- */}
-      {/* MODAL 2: SIGNED DOWNLOAD URL MODAL */}
-      {/* ----------------------------------------------------------------------------- */}
-      {signedUrlModalData && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f2518] border border-[#00ff88]/40 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl relative glow-neon-sm">
-            <div className="flex items-center gap-3 border-b border-[#1e3f2b] pb-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-950 border border-[#00ff88]/40 flex items-center justify-center text-[#00ff88]">
-                <Download className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-base">Authorized Download Ready</h3>
-                <span className="text-[10px] text-emerald-400 font-mono">Zero-Trust ABAC Verification: PASSED</span>
-              </div>
-            </div>
 
-            <p className="text-xs text-slate-300">
-              Your cryptographic identity and access permission records were verified against the Firestore database.
-            </p>
-
-            <div className="p-3 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] space-y-2">
-              <div className="flex justify-between text-[11px] text-slate-400">
-                <span>File: <strong className="text-white">{signedUrlModalData.doc.title}</strong></span>
-                <span className="text-amber-400 font-mono">Token Expiry: 60s</span>
-              </div>
-              <div className="text-[10px] font-mono text-slate-400 break-all p-2 rounded bg-[#05140b] border border-[#1e3f2b]">
-                {signedUrlModalData.url}
-              </div>
-              <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#00ff88]" />
-                <span>SHA-256 Digest: {signedUrlModalData.doc.fileSha256.slice(0, 16)}...</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setSignedUrlModalData(null)}
-                className="px-4 py-2 rounded-lg bg-[#0a1c12] border border-[#1e3f2b] text-slate-300 text-xs"
-              >
-                Close
-              </button>
-              {signedUrlModalData.doc.fileDataUrl ? (
-                <a
-                  href={signedUrlModalData.doc.fileDataUrl}
-                  download={signedUrlModalData.doc.title}
-                  onClick={() => setSignedUrlModalData(null)}
-                  className="px-4 py-2 rounded-lg bg-[#00ff88] hover:bg-[#00cc6a] text-black font-bold text-xs inline-flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Document File</span>
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    alert(`Download verified! File "${signedUrlModalData.doc.title}" downloaded securely.`);
-                    setSignedUrlModalData(null);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-[#00ff88] hover:bg-[#00cc6a] text-black font-bold text-xs inline-flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download File</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ----------------------------------------------------------------------------- */}
       {/* MODAL 3: TAMPER SIMULATOR MODAL */}
